@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Screen Paint0r
+Comment=Draw on your screen
+Exec=/opt/screen-paint0r/screen-paint0r
+Icon=screen-paint0r
+Type=Application
+Categories=Utility;Graphics;
+StartupWMClass=screen-paint0r

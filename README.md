@@ -41,16 +41,53 @@ Draw on your screen. Annotations stay visible until you clear them.
 
 ```bash
 npm install
+```
 
-# Dev mode (quick iteration, shows as "Electron" in dock)
+### macOS
+
+```bash
+# Dev mode (quick iteration)
 npm start
 
-# Package as a proper macOS app
+# Package as a .app bundle
 npm run pack
-
-# Launch the packaged app
 open "release/Screen Paint0r-darwin-arm64/Screen Paint0r.app"
 ```
+
+### Arch Linux
+
+Install from the included PKGBUILD:
+
+```bash
+makepkg -si
+```
+
+Or build manually:
+
+```bash
+npm run pack:linux
+# Run directly
+./release/screen-paint0r-linux-x64/screen-paint0r
+```
+
+> **Note:** Requires a compositing window manager and X11 for transparent overlay support. Wayland click-through is unreliable.
+
+### Build all platforms
+
+```bash
+npm run pack:all
+```
+
+### All build commands
+
+| Command | What it does |
+|---|---|
+| `npm start` | Dev mode — build + run (quick iteration) |
+| `npm run build` | Build only (no launch) |
+| `npm run icons` | Generate platform icons (`.icns` + `.png`) |
+| `npm run pack` | Package macOS `.app` bundle (arm64) |
+| `npm run pack:linux` | Package Linux x64 binary |
+| `npm run pack:all` | Package both platforms |
 
 ## How It Works
 

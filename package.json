@@ -8,12 +8,10 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "node build.mjs && npx electron .",
-    "pack": "node build.mjs && node generate-icns.mjs && npx electron-packager . \"Screen Paint0r\" --platform=darwin --arch=arm64 --out=release --overwrite --icon=assets/icon --ignore=\"(src|build\\.mjs|generate-icns|tsconfig|forge\\.config|vite\\.|assets)\"",
-    "start:forge": "electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "icons": "node generate-icons.mjs",
+    "pack": "npm run build && npm run icons && npx electron-packager . \"Screen Paint0r\" --platform=darwin --arch=arm64 --out=release --overwrite --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\" && cp assets/icon.icns \"release/Screen Paint0r-darwin-arm64/Screen Paint0r.app/Contents/Resources/electron.icns\"",
+    "pack:linux": "npm run build && npm run icons && npx electron-packager . \"screen-paint0r\" --platform=linux --arch=x64 --out=release --overwrite --icon=assets/icon.png --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\"",
+    "pack:all": "npm run pack && npm run pack:linux"
   },
   "keywords": [],
   "author": {

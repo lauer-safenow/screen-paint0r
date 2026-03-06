@@ -1,11 +1,12 @@
-// Generate .icns file from our custom icon drawing
-// Uses the same drawIcon function from create-icon.ts but standalone for build tooling
+// Generate icon files for all platforms
+// macOS: .icns via iconutil
+// Linux: .png (256x256)
 
 import { deflateSync } from 'node:zlib';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, platform } from 'node:os';
 
 function encodePNG(width, height, rgba) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -86,8 +87,7 @@ function drawIcon(size) {
     }
   };
 
-  const s = size;
-  const scale = s / 32;
+  const scale = size / 32;
 
   line(22 * scale, 4 * scale, 12 * scale, 14 * scale, 2.5 * scale, 180, 180, 200);
   line(12 * scale, 14 * scale, 9 * scale, 17 * scale, 2 * scale, 140, 140, 160);
@@ -102,31 +102,37 @@ function drawIcon(size) {
   return rgba;
 }
 
-// Generate PNGs at all required sizes for .iconset
-const iconsetDir = join(tmpdir(), 'ScreenPaint0r.iconset');
-execSync(`mkdir -p "${iconsetDir}"`);
+mkdirSync('assets', { recursive: true });
 
-const sizes = [
-  { name: 'icon_16x16.png', size: 16 },
-  { name: 'icon_16x16@2x.png', size: 32 },
-  { name: 'icon_32x32.png', size: 32 },
-  { name: 'icon_32x32@2x.png', size: 64 },
-  { name: 'icon_128x128.png', size: 128 },
-  { name: 'icon_128x128@2x.png', size: 256 },
-  { name: 'icon_256x256.png', size: 256 },
-  { name: 'icon_256x256@2x.png', size: 512 },
-  { name: 'icon_512x512.png', size: 512 },
-  { name: 'icon_512x512@2x.png', size: 1024 },
-];
+// Always generate PNG for Linux
+const png256 = encodePNG(256, 256, drawIcon(256));
+writeFileSync(join('assets', 'icon.png'), png256);
+console.log('Generated assets/icon.png');
 
-for (const { name, size } of sizes) {
-  const rgba = drawIcon(size);
-  const png = encodePNG(size, size, rgba);
-  writeFileSync(join(iconsetDir, name), png);
+// Generate .icns on macOS only (requires iconutil)
+if (platform() === 'darwin') {
+  const iconsetDir = join(tmpdir(), 'ScreenPaint0r.iconset');
+  execSync(`mkdir -p "${iconsetDir}"`);
+
+  const sizes = [
+    { name: 'icon_16x16.png', size: 16 },
+    { name: 'icon_16x16@2x.png', size: 32 },
+    { name: 'icon_32x32.png', size: 32 },
+    { name: 'icon_32x32@2x.png', size: 64 },
+    { name: 'icon_128x128.png', size: 128 },
+    { name: 'icon_128x128@2x.png', size: 256 },
+    { name: 'icon_256x256.png', size: 256 },
+    { name: 'icon_256x256@2x.png', size: 512 },
+    { name: 'icon_512x512.png', size: 512 },
+    { name: 'icon_512x512@2x.png', size: 1024 },
+  ];
+
+  for (const { name, size } of sizes) {
+    const rgba = drawIcon(size);
+    const png = encodePNG(size, size, rgba);
+    writeFileSync(join(iconsetDir, name), png);
+  }
+
+  execSync(`iconutil -c icns "${iconsetDir}" -o assets/icon.icns`);
+  console.log('Generated assets/icon.icns');
 }
-
-// Use macOS iconutil to create .icns
-const outPath = join(process.cwd(), 'assets', 'icon.icns');
-execSync(`mkdir -p assets`);
-execSync(`iconutil -c icns "${iconsetDir}" -o "${outPath}"`);
-console.log(`Generated ${outPath}`);

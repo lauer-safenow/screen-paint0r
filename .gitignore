@@ -94,14 +94,8 @@ out/
 # Build output
 dist/
 
-# Webpack
-.webpack/
+# Packaged releases
+release/
 
-# Vite
-.vite/
-
-# Electron-Forge
-out/
-
-# Build output
-dist/
+# Generated icons
+assets/
