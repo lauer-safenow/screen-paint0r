@@ -1,0 +1,41 @@
+{
+  "name": "screen-paint0r",
+  "productName": "screen-paint0r",
+  "version": "1.0.0",
+  "description": "Draw on your screen with global shortcuts",
+  "main": "dist/main.js",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && npx electron .",
+    "start:forge": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "keywords": [],
+  "author": {
+    "name": "lauer-safenow",
+    "email": "lauer@safenow.de"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-rpm": "^7.11.1",
+    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
+    "@electron-forge/plugin-fuses": "^7.11.1",
+    "@electron-forge/plugin-vite": "^7.11.1",
+    "@electron/fuses": "^1.8.0",
+    "electron": "40.8.0",
+    "esbuild": "^0.27.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}
