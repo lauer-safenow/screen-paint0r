@@ -2,17 +2,39 @@ import { DrawingElement, Point } from '../shared/types';
 
 export class DrawingEngine {
   private elements: DrawingElement[] = [];
+  private redoStack: DrawingElement[] = [];
 
   addElement(element: DrawingElement) {
     this.elements.push(element);
+    this.redoStack = [];
   }
 
   removeElement(index: number) {
     this.elements.splice(index, 1);
+    this.redoStack = [];
   }
 
   clear() {
     this.elements = [];
+    this.redoStack = [];
+  }
+
+  undo(): boolean {
+    const el = this.elements.pop();
+    if (el) {
+      this.redoStack.push(el);
+      return true;
+    }
+    return false;
+  }
+
+  redo(): boolean {
+    const el = this.redoStack.pop();
+    if (el) {
+      this.elements.push(el);
+      return true;
+    }
+    return false;
   }
 
   getElements(): readonly DrawingElement[] {

@@ -19,5 +19,6 @@ export interface DrawingStyle {
 export interface ScreenPaintApi {
   onDrawModeChanged: (callback: (active: boolean) => void) => void;
   onClearAll: (callback: () => void) => void;
+  onLaserModeChanged: (callback: (active: boolean) => void) => void;
   sendEscapePressed: () => void;
 }

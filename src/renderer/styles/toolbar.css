@@ -14,7 +14,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   z-index: 10000;
   user-select: none;
-  -webkit-app-region: drag;
+  cursor: default;
 }
 
 .toolbar.visible {
@@ -150,4 +150,16 @@
 
 .action-btn.danger:hover {
   background: rgba(239, 68, 68, 0.5);
+}
+
+.toolbar-drag-handle {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 18px;
+  cursor: grab;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.toolbar-drag-handle:active {
+  cursor: grabbing;
 }

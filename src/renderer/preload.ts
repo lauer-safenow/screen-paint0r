@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('screenPaintApi', {
   onClearAll: (callback: () => void) => {
     ipcRenderer.on(IPC_CHANNELS.CLEAR_ALL, () => callback());
   },
+  onLaserModeChanged: (callback: (active: boolean) => void) => {
+    ipcRenderer.on(IPC_CHANNELS.LASER_MODE_CHANGED, (_event, active: boolean) => callback(active));
+  },
   sendEscapePressed: () => {
     ipcRenderer.send(IPC_CHANNELS.ESCAPE_PRESSED);
   },

@@ -12,11 +12,11 @@ const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ffffff', '#000000'
 const WIDTHS = [2, 4, 8];
 
 const TOOL_ICONS: Record<ToolType, string> = {
-  freehand: '✏',
-  rectangle: '▭',
-  circle: '◯',
-  arrow: '➜',
-  eraser: '⌫',
+  freehand: '\u270F',
+  rectangle: '\u25AD',
+  circle: '\u25EF',
+  arrow: '\u279C',
+  eraser: '\u232B',
 };
 
 export class Toolbar {
@@ -28,15 +28,32 @@ export class Toolbar {
   private onChange: ToolbarChangeCallback;
   private onClear: ActionCallback;
   private onDone: ActionCallback;
+  private onUndo: ActionCallback;
+  private onRedo: ActionCallback;
   private customColor = '#ff6600';
 
-  constructor(container: HTMLElement, onChange: ToolbarChangeCallback, onClear: ActionCallback, onDone: ActionCallback) {
+  // Drag state
+  private dragging = false;
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+
+  constructor(
+    container: HTMLElement,
+    onChange: ToolbarChangeCallback,
+    onClear: ActionCallback,
+    onDone: ActionCallback,
+    onUndo: ActionCallback,
+    onRedo: ActionCallback,
+  ) {
     this.onChange = onChange;
     this.onClear = onClear;
     this.onDone = onDone;
+    this.onUndo = onUndo;
+    this.onRedo = onRedo;
     this.el = document.createElement('div');
     this.el.className = 'toolbar';
     container.appendChild(this.el);
+    this.setupDrag();
     this.render();
   }
 
@@ -52,14 +69,61 @@ export class Toolbar {
     return this.state;
   }
 
+  getElement(): HTMLDivElement {
+    return this.el;
+  }
+
   setTool(tool: ToolType) {
     this.state.activeTool = tool;
     this.render();
     this.onChange(this.state);
   }
 
+  private setupDrag() {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!this.dragging) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.el.style.left = (e.clientX - this.dragOffsetX) + 'px';
+      this.el.style.top = (e.clientY - this.dragOffsetY) + 'px';
+      this.el.style.transform = 'none';
+    };
+
+    const onMouseUp = () => {
+      this.dragging = false;
+      document.removeEventListener('mousemove', onMouseMove, true);
+      document.removeEventListener('mouseup', onMouseUp, true);
+    };
+
+    this.el.addEventListener('mousedown', (e) => {
+      const target = e.target as HTMLElement;
+      // Only drag from the toolbar background / drag handle, not from buttons
+      if (target.closest('.tool-btn, .action-btn, .width-btn, .color-dot, .color-input-wrapper')) {
+        return;
+      }
+      this.dragging = true;
+      const rect = this.el.getBoundingClientRect();
+      this.dragOffsetX = e.clientX - rect.left;
+      this.dragOffsetY = e.clientY - rect.top;
+      e.preventDefault();
+      e.stopPropagation();
+      document.addEventListener('mousemove', onMouseMove, true);
+      document.addEventListener('mouseup', onMouseUp, true);
+    });
+  }
+
+  isEventOnToolbar(e: MouseEvent): boolean {
+    return this.el.contains(e.target as Node);
+  }
+
   private render() {
     this.el.innerHTML = '';
+
+    // Drag handle
+    const handle = document.createElement('div');
+    handle.className = 'toolbar-drag-handle';
+    handle.textContent = '\u2261';
+    this.el.appendChild(handle);
 
     // Tool buttons
     const toolGroup = this.createGroup();
@@ -133,6 +197,24 @@ export class Toolbar {
       });
       widthGroup.appendChild(btn);
     }
+
+    this.addSeparator();
+
+    // Undo/Redo buttons
+    const undoRedoGroup = this.createGroup();
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'tool-btn';
+    undoBtn.textContent = '\u21A9';
+    undoBtn.title = 'Undo (Cmd+Z)';
+    undoBtn.addEventListener('click', this.onUndo);
+    undoRedoGroup.appendChild(undoBtn);
+
+    const redoBtn = document.createElement('button');
+    redoBtn.className = 'tool-btn';
+    redoBtn.textContent = '\u21AA';
+    redoBtn.title = 'Redo (Cmd+Y)';
+    redoBtn.addEventListener('click', this.onRedo);
+    undoRedoGroup.appendChild(redoBtn);
 
     this.addSeparator();
 

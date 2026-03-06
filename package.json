@@ -33,6 +33,7 @@
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron-forge/plugin-vite": "^7.11.1",
     "@electron/fuses": "^1.8.0",
+    "@electron/packager": "^19.0.5",
     "electron": "40.8.0",
     "esbuild": "^0.27.3",
     "typescript": "^5.9.3",
