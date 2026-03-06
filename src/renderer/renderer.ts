@@ -115,10 +115,17 @@ const toolbar = new Toolbar(
   () => {
     if (engine.redo()) redrawPersistent();
   },
+  () => {
+    api.sendToggleLaser();
+  },
+  () => {
+    api.sendToggleDraw();
+  },
 );
 
 // Mouse event handlers
 canvasManager.activeCanvas.addEventListener('mousedown', (e) => {
+  if (laserModeActive) return;
   if (!drawModeActive) return;
   if (toolbar.isEventOnToolbar(e)) return;
   isDragging = true;
@@ -216,10 +223,13 @@ api.onClearAll(() => {
 api.onLaserModeChanged((active) => {
   laserModeActive = active;
   canvasManager.setInteractive(active);
+  toolbar.setPointerActive(active);
   if (active) {
+    toolbar.show();
     laserTrail.length = 0;
     laserAnimFrame = requestAnimationFrame(renderLaser);
   } else {
+    if (!drawModeActive) toolbar.hide();
     if (laserAnimFrame) cancelAnimationFrame(laserAnimFrame);
     laserAnimFrame = null;
     laserTrail.length = 0;

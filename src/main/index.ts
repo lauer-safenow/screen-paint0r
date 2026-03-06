@@ -103,6 +103,14 @@ if (!gotLock) {
       createTray(() => toggleDrawMode(), () => clearAll(), () => toggleLaserMode());
       log('Tray created. App fully initialized.');
 
+      ipcMain.on(IPC_CHANNELS.TOGGLE_LASER, () => {
+        toggleLaserMode();
+      });
+
+      ipcMain.on(IPC_CHANNELS.TOGGLE_DRAW, () => {
+        toggleDrawMode();
+      });
+
       ipcMain.on(IPC_CHANNELS.ESCAPE_PRESSED, () => {
         if (drawModeActive) {
           drawModeActive = false;

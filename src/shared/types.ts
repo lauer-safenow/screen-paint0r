@@ -21,4 +21,6 @@ export interface ScreenPaintApi {
   onClearAll: (callback: () => void) => void;
   onLaserModeChanged: (callback: (active: boolean) => void) => void;
   sendEscapePressed: () => void;
+  sendToggleLaser: () => void;
+  sendToggleDraw: () => void;
 }

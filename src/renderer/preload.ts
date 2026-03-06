@@ -14,4 +14,10 @@ contextBridge.exposeInMainWorld('screenPaintApi', {
   sendEscapePressed: () => {
     ipcRenderer.send(IPC_CHANNELS.ESCAPE_PRESSED);
   },
+  sendToggleLaser: () => {
+    ipcRenderer.send(IPC_CHANNELS.TOGGLE_LASER);
+  },
+  sendToggleDraw: () => {
+    ipcRenderer.send(IPC_CHANNELS.TOGGLE_DRAW);
+  },
 });

@@ -30,7 +30,10 @@ export class Toolbar {
   private onDone: ActionCallback;
   private onUndo: ActionCallback;
   private onRedo: ActionCallback;
+  private onPointer: ActionCallback;
+  private onSwitchToDraw: ActionCallback;
   private customColor = '#ff6600';
+  private pointerActive = false;
 
   // Drag state
   private dragging = false;
@@ -44,12 +47,16 @@ export class Toolbar {
     onDone: ActionCallback,
     onUndo: ActionCallback,
     onRedo: ActionCallback,
+    onPointer: ActionCallback,
+    onSwitchToDraw: ActionCallback,
   ) {
     this.onChange = onChange;
     this.onClear = onClear;
     this.onDone = onDone;
     this.onUndo = onUndo;
     this.onRedo = onRedo;
+    this.onPointer = onPointer;
+    this.onSwitchToDraw = onSwitchToDraw;
     this.el = document.createElement('div');
     this.el.className = 'toolbar';
     container.appendChild(this.el);
@@ -77,6 +84,11 @@ export class Toolbar {
     this.state.activeTool = tool;
     this.render();
     this.onChange(this.state);
+  }
+
+  setPointerActive(active: boolean) {
+    this.pointerActive = active;
+    this.render();
   }
 
   private setupDrag() {
@@ -124,6 +136,27 @@ export class Toolbar {
     handle.className = 'toolbar-drag-handle';
     handle.textContent = '\u2261';
     this.el.appendChild(handle);
+
+    if (this.pointerActive) {
+      // Minimal toolbar: just pointer + draw
+      const pointerGroup = this.createGroup();
+      const pointerBtn = document.createElement('button');
+      pointerBtn.className = 'tool-btn active';
+      pointerBtn.textContent = '\u{1F53A}';
+      pointerBtn.title = 'Laser Pointer (active)';
+      pointerBtn.addEventListener('click', this.onPointer);
+      pointerGroup.appendChild(pointerBtn);
+
+      this.addSeparator();
+
+      const actionGroup = this.createGroup();
+      const drawBtn = document.createElement('button');
+      drawBtn.className = 'action-btn';
+      drawBtn.textContent = 'Draw';
+      drawBtn.addEventListener('click', this.onSwitchToDraw);
+      actionGroup.appendChild(drawBtn);
+      return;
+    }
 
     // Tool buttons
     const toolGroup = this.createGroup();
@@ -215,6 +248,17 @@ export class Toolbar {
     redoBtn.title = 'Redo (Cmd+Y)';
     redoBtn.addEventListener('click', this.onRedo);
     undoRedoGroup.appendChild(redoBtn);
+
+    this.addSeparator();
+
+    // Pointer button
+    const pointerGroup = this.createGroup();
+    const pointerBtn = document.createElement('button');
+    pointerBtn.className = 'tool-btn';
+    pointerBtn.textContent = '\u{1F53A}';
+    pointerBtn.title = 'Laser Pointer';
+    pointerBtn.addEventListener('click', this.onPointer);
+    pointerGroup.appendChild(pointerBtn);
 
     this.addSeparator();
 
