@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('screenPaintApi', {
   onLaserModeChanged: (callback: (active: boolean) => void) => {
     ipcRenderer.on(IPC_CHANNELS.LASER_MODE_CHANGED, (_event, active: boolean) => callback(active));
   },
+  onKeybindings: (callback: (keybindings: Record<string, string>) => void) => {
+    ipcRenderer.on(IPC_CHANNELS.KEYBINDINGS, (_event, keybindings) => callback(keybindings));
+  },
   sendEscapePressed: () => {
     ipcRenderer.send(IPC_CHANNELS.ESCAPE_PRESSED);
   },

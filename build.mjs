@@ -34,6 +34,17 @@ await esbuild.build({
   external: ['electron'],
 });
 
+// Build preferences preload
+await esbuild.build({
+  entryPoints: ['src/renderer/preferences-preload.ts'],
+  bundle: true,
+  platform: 'node',
+  target: 'node18',
+  format: 'cjs',
+  outfile: `${DIST}/preferences-preload.js`,
+  external: ['electron'],
+});
+
 // Build renderer JS
 await esbuild.build({
   entryPoints: ['src/renderer/renderer.ts'],
@@ -44,9 +55,20 @@ await esbuild.build({
   outfile: `${DIST}/renderer.js`,
 });
 
+// Build preferences renderer JS
+await esbuild.build({
+  entryPoints: ['src/renderer/preferences.ts'],
+  bundle: true,
+  platform: 'browser',
+  target: 'chrome120',
+  format: 'iife',
+  outfile: `${DIST}/preferences.js`,
+});
+
 // Copy CSS files
 const overlayCss = fs.readFileSync('src/renderer/styles/overlay.css', 'utf-8');
 const toolbarCss = fs.readFileSync('src/renderer/styles/toolbar.css', 'utf-8');
+const prefsCss = fs.readFileSync('src/renderer/styles/preferences.css', 'utf-8');
 
 // Generate index.html with inlined CSS
 const html = `<!DOCTYPE html>
@@ -63,5 +85,28 @@ const html = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(`${DIST}/index.html`, html);
+
+// Generate preferences.html
+const prefsHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Preferences</title>
+  <style>${prefsCss}</style>
+</head>
+<body>
+  <h1>Keybindings</h1>
+  <p class="subtitle">Click a shortcut to change it, then press your new key combination.</p>
+  <div id="bindings" class="bindings"></div>
+  <div class="actions">
+    <button id="save" class="primary">Save</button>
+    <button id="reset" class="secondary">Reset to Defaults</button>
+    <span id="status" class="status"></span>
+  </div>
+  <script src="./preferences.js"></script>
+</body>
+</html>`;
+
+fs.writeFileSync(`${DIST}/preferences.html`, prefsHtml);
 
 console.log('Build complete → dist/');

@@ -1,14 +1,18 @@
-import { app, BrowserWindow, globalShortcut, ipcMain } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu } from 'electron';
 import { createOverlayWindow, setDrawMode } from './overlay-window';
 import { createTray } from './tray';
 import { createDockIcon } from './create-icon';
-import { IPC_CHANNELS, SHORTCUTS } from '../shared/constants';
+import { openPreferences } from './preferences-window';
+import { IPC_CHANNELS } from '../shared/constants';
+import { Keybindings, DEFAULT_KEYBINDINGS, GLOBAL_SHORTCUT_KEYS } from '../shared/keybindings';
 import fs from 'node:fs';
 import path from 'node:path';
 
 app.setName('Screen Paint0r');
 
 const LOG_FILE = path.join(app.getPath('userData'), 'screen-paint0r.log');
+const CONFIG_DIR = path.join(app.getPath('userData'), 'config');
+const KEYBINDINGS_FILE = path.join(CONFIG_DIR, 'keybindings.json');
 
 function log(msg: string) {
   const line = `[${new Date().toISOString()}] ${msg}\n`;
@@ -23,9 +27,62 @@ process.on('unhandledRejection', (reason) => {
   log(`UNHANDLED REJECTION: ${reason}`);
 });
 
+function isAscii(str: string): boolean {
+  return /^[\x20-\x7E]+$/.test(str);
+}
+
+function sanitizeKeybindings(kb: Record<string, string>): Keybindings {
+  const result = { ...DEFAULT_KEYBINDINGS };
+  for (const key of Object.keys(DEFAULT_KEYBINDINGS) as (keyof Keybindings)[]) {
+    if (kb[key] && typeof kb[key] === 'string' && isAscii(kb[key])) {
+      result[key] = kb[key];
+    } else if (kb[key]) {
+      log(`Invalid keybinding for "${key}": "${kb[key]}" (non-ASCII), reset to default`);
+    }
+  }
+  return result;
+}
+
+function loadKeybindings(): Keybindings {
+  try {
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    if (fs.existsSync(KEYBINDINGS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(KEYBINDINGS_FILE, 'utf-8'));
+      const sanitized = sanitizeKeybindings(data);
+      // Write back sanitized version in case we fixed anything
+      fs.writeFileSync(KEYBINDINGS_FILE, JSON.stringify(sanitized, null, 2) + '\n');
+      return sanitized;
+    }
+  } catch (e) {
+    log(`Error loading keybindings: ${e}`);
+  }
+  try {
+    fs.writeFileSync(KEYBINDINGS_FILE, JSON.stringify(DEFAULT_KEYBINDINGS, null, 2) + '\n');
+    log(`Default keybindings written to ${KEYBINDINGS_FILE}`);
+  } catch (e) {
+    log(`Error writing default keybindings: ${e}`);
+  }
+  return { ...DEFAULT_KEYBINDINGS };
+}
+
+function saveKeybindings(kb: Keybindings) {
+  try {
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    fs.writeFileSync(KEYBINDINGS_FILE, JSON.stringify(kb, null, 2) + '\n');
+    log('Keybindings saved');
+  } catch (e) {
+    log(`Error saving keybindings: ${e}`);
+  }
+}
+
 let overlayWindow: BrowserWindow | null = null;
 let drawModeActive = false;
 let laserModeActive = false;
+let currentKeybindings: Keybindings;
 
 function toggleDrawMode() {
   if (laserModeActive) {
@@ -59,6 +116,31 @@ function clearAll() {
   }
 }
 
+const GLOBAL_ACTIONS: Record<string, () => void> = {
+  toggleDraw: toggleDrawMode,
+  togglePointer: toggleLaserMode,
+  clearAll: clearAll,
+};
+
+function registerGlobalShortcuts(kb: Keybindings) {
+  globalShortcut.unregisterAll();
+  for (const key of GLOBAL_SHORTCUT_KEYS) {
+    const accelerator = kb[key];
+    const action = GLOBAL_ACTIONS[key];
+    if (accelerator && action && isAscii(accelerator)) {
+      const ok = globalShortcut.register(accelerator, action);
+      log(`Registered ${key}: ${accelerator} → ${ok}`);
+    }
+  }
+}
+
+function applyKeybindings(kb: Keybindings) {
+  currentKeybindings = kb;
+  registerGlobalShortcuts(kb);
+  // Send to overlay renderer
+  overlayWindow?.webContents.send(IPC_CHANNELS.KEYBINDINGS, kb);
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
@@ -73,12 +155,14 @@ if (!gotLock) {
     try {
       log('App ready');
 
-      // Show in dock with custom icon
       if (process.platform === 'darwin' && app.dock) {
         try {
           app.dock.setIcon(createDockIcon());
-          // Force dock icon to stay visible
           app.dock.show();
+          const dockMenu = Menu.buildFromTemplate([
+            { label: 'Preferences…', click: () => openPreferences() },
+          ]);
+          app.dock.setMenu(dockMenu);
           log('Dock icon set');
         } catch (e) {
           log(`Dock icon error: ${e}`);
@@ -93,15 +177,90 @@ if (!gotLock) {
         overlayWindow = null;
       });
 
-      log(`Registering shortcuts: ${SHORTCUTS.TOGGLE_DRAW}, ${SHORTCUTS.CLEAR_ALL}, ${SHORTCUTS.TOGGLE_LASER}`);
-      const drawReg = globalShortcut.register(SHORTCUTS.TOGGLE_DRAW, toggleDrawMode);
-      const clearReg = globalShortcut.register(SHORTCUTS.CLEAR_ALL, clearAll);
-      const laserReg = globalShortcut.register(SHORTCUTS.TOGGLE_LASER, toggleLaserMode);
-      log(`Shortcut registration - draw: ${drawReg}, clear: ${clearReg}, laser: ${laserReg}`);
+      // Load and apply keybindings
+      currentKeybindings = loadKeybindings();
+      log(`Keybindings config: ${KEYBINDINGS_FILE}`);
+      applyKeybindings(currentKeybindings);
+
+      // App menu with Cmd+, for preferences
+      const appMenu = Menu.buildFromTemplate([
+        {
+          label: app.name,
+          submenu: [
+            { label: 'About Screen Paint0r', role: 'about' },
+            { type: 'separator' },
+            {
+              label: 'Preferences…',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => {
+                log('Preferences clicked from app menu');
+                openPreferences();
+              },
+            },
+            { type: 'separator' },
+            { label: 'Quit', accelerator: 'CmdOrCtrl+Q', role: 'quit' },
+          ],
+        },
+        {
+          label: 'Settings',
+          submenu: [
+            {
+              label: 'Preferences…',
+              accelerator: 'CmdOrCtrl+,',
+              click: () => openPreferences(),
+            },
+          ],
+        },
+      ]);
+      Menu.setApplicationMenu(appMenu);
+
+      // Send keybindings when renderer loads
+      overlayWindow.webContents.on('did-finish-load', () => {
+        overlayWindow?.webContents.send(IPC_CHANNELS.KEYBINDINGS, currentKeybindings);
+      });
 
       log('Creating tray...');
-      createTray(() => toggleDrawMode(), () => clearAll(), () => toggleLaserMode());
+      createTray(
+        () => toggleDrawMode(),
+        () => clearAll(),
+        () => toggleLaserMode(),
+        () => openPreferences(),
+        currentKeybindings,
+      );
       log('Tray created. App fully initialized.');
+
+      // Preferences IPC handlers
+      ipcMain.handle('get-keybindings', () => {
+        return currentKeybindings;
+      });
+
+      ipcMain.handle('save-keybindings', (_event, kb: Keybindings) => {
+        const sanitized = sanitizeKeybindings(kb);
+        saveKeybindings(sanitized);
+        applyKeybindings(sanitized);
+        // Rebuild tray with new labels
+        createTray(
+          () => toggleDrawMode(),
+          () => clearAll(),
+          () => toggleLaserMode(),
+          () => openPreferences(),
+          kb,
+        );
+      });
+
+      ipcMain.handle('reset-keybindings', () => {
+        const defaults = { ...DEFAULT_KEYBINDINGS };
+        saveKeybindings(defaults);
+        applyKeybindings(defaults);
+        createTray(
+          () => toggleDrawMode(),
+          () => clearAll(),
+          () => toggleLaserMode(),
+          () => openPreferences(),
+          defaults,
+        );
+        return defaults;
+      });
 
       ipcMain.on(IPC_CHANNELS.TOGGLE_LASER, () => {
         toggleLaserMode();

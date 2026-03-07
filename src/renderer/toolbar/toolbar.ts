@@ -34,6 +34,7 @@ export class Toolbar {
   private onSwitchToDraw: ActionCallback;
   private customColor = '#ff6600';
   private pointerActive = false;
+  private minimized = false;
 
   // Drag state
   private dragging = false;
@@ -91,6 +92,16 @@ export class Toolbar {
     this.render();
   }
 
+  toggleMinimized() {
+    this.minimized = !this.minimized;
+    this.render();
+  }
+
+  setMinimized(minimized: boolean) {
+    this.minimized = minimized;
+    this.render();
+  }
+
   private setupDrag() {
     const onMouseMove = (e: MouseEvent) => {
       if (!this.dragging) return;
@@ -136,6 +147,20 @@ export class Toolbar {
     handle.className = 'toolbar-drag-handle';
     handle.textContent = '\u2261';
     this.el.appendChild(handle);
+
+    if (this.minimized) {
+      // Minimized: just a small expand button
+      const expandBtn = document.createElement('button');
+      expandBtn.className = 'tool-btn';
+      expandBtn.textContent = '\u25B6';
+      expandBtn.title = 'Show toolbar';
+      expandBtn.addEventListener('click', () => {
+        this.minimized = false;
+        this.render();
+      });
+      this.el.appendChild(expandBtn);
+      return;
+    }
 
     if (this.pointerActive) {
       // Minimal toolbar: just pointer + draw

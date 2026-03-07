@@ -1,4 +1,5 @@
 import { ScreenPaintApi, ToolType, DrawingStyle } from '../shared/types';
+import { matchesAccelerator } from '../shared/keybindings';
 import { CanvasManager } from './canvas-manager';
 import { DrawingEngine } from './drawing-engine';
 import { Toolbar } from './toolbar/toolbar';
@@ -41,6 +42,9 @@ let currentStyle: DrawingStyle = { color: '#ef4444', width: 4 };
 let drawModeActive = false;
 let isDragging = false;
 let laserModeActive = false;
+
+// Keybindings (will be set from main process)
+let keybindings: Record<string, string> = {};
 
 // Laser pointer state
 interface LaserPoint { x: number; y: number; time: number; }
@@ -157,55 +161,39 @@ canvasManager.activeCanvas.addEventListener('mouseup', (e) => {
   }
 });
 
-// Keyboard shortcuts for tool switching
+// Keyboard shortcuts (configurable)
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && laserModeActive) {
-    api.sendEscapePressed();
-    return;
-  }
+  if (!drawModeActive && !laserModeActive) return;
 
-  if (!drawModeActive) return;
-
-  if (e.key === 'Escape') {
-    api.sendEscapePressed();
-    return;
-  }
-
-  // Undo: Cmd+Z (mac) / Ctrl+Z
-  if (e.key === 'z' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+  if (keybindings.undo && matchesAccelerator(e, keybindings.undo)) {
     e.preventDefault();
     if (engine.undo()) redrawPersistent();
     return;
   }
 
-  // Redo: Cmd+Y (mac) / Ctrl+Y, or Cmd+Shift+Z / Ctrl+Shift+Z
-  if ((e.key === 'y' && (e.metaKey || e.ctrlKey)) ||
-      (e.key === 'z' && (e.metaKey || e.ctrlKey) && e.shiftKey)) {
+  if (keybindings.redo && matchesAccelerator(e, keybindings.redo)) {
     e.preventDefault();
     if (engine.redo()) redrawPersistent();
     return;
   }
 
-  const toolKeys: Record<string, ToolType> = {
-    '1': 'freehand',
-    '2': 'rectangle',
-    '3': 'circle',
-    '4': 'arrow',
-    '5': 'eraser',
-  };
-
-  const tool = toolKeys[e.key];
-  if (tool) {
-    toolbar.setTool(tool);
-    currentTool = tools[tool];
+  if (keybindings.minimizeMenu && matchesAccelerator(e, keybindings.minimizeMenu)) {
+    e.preventDefault();
+    toolbar.toggleMinimized();
+    return;
   }
 });
 
 // IPC handlers
+api.onKeybindings((kb) => {
+  keybindings = kb;
+});
+
 api.onDrawModeChanged((active) => {
   drawModeActive = active;
   canvasManager.setInteractive(active);
   if (active) {
+    toolbar.setMinimized(false);
     toolbar.show();
   } else {
     toolbar.hide();
@@ -225,6 +213,7 @@ api.onLaserModeChanged((active) => {
   canvasManager.setInteractive(active);
   toolbar.setPointerActive(active);
   if (active) {
+    toolbar.setMinimized(false);
     toolbar.show();
     laserTrail.length = 0;
     laserAnimFrame = requestAnimationFrame(renderLaser);
