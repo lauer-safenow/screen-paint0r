@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('screenPaintApi', {
   sendEscapePressed: () => {
     ipcRenderer.send(IPC_CHANNELS.ESCAPE_PRESSED);
   },
+  sendQuitApp: () => {
+    ipcRenderer.send(IPC_CHANNELS.QUIT_APP);
+  },
   sendToggleLaser: () => {
     ipcRenderer.send(IPC_CHANNELS.TOGGLE_LASER);
   },

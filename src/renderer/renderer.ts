@@ -52,11 +52,22 @@ const laserTrail: LaserPoint[] = [];
 const LASER_TRAIL_DURATION = 600; // ms
 const LASER_DOT_RADIUS = 6;
 let laserAnimFrame: number | null = null;
+let laserColor = '#fa8072'; // salmon
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace('#', '');
+  return {
+    r: parseInt(h.substring(0, 2), 16),
+    g: parseInt(h.substring(2, 4), 16),
+    b: parseInt(h.substring(4, 6), 16),
+  };
+}
 
 function renderLaser() {
   canvasManager.clearActive();
   const now = Date.now();
   const ctx = canvasManager.activeCtx;
+  const { r, g, b } = hexToRgb(laserColor);
 
   // Remove expired points, but always keep the last one (current position)
   while (laserTrail.length > 1 && now - laserTrail[0].time > LASER_TRAIL_DURATION) {
@@ -72,7 +83,7 @@ function renderLaser() {
   for (let i = 1; i < laserTrail.length; i++) {
     const age = now - laserTrail[i].time;
     const alpha = Math.max(0, 1 - age / LASER_TRAIL_DURATION);
-    ctx.strokeStyle = `rgba(255, 30, 30, ${alpha * 0.7})`;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.7})`;
     ctx.lineWidth = 3 * alpha + 1;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -85,14 +96,14 @@ function renderLaser() {
   const tip = laserTrail[laserTrail.length - 1];
   ctx.beginPath();
   ctx.arc(tip.x, tip.y, LASER_DOT_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255, 30, 30, 0.9)';
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.9)`;
   ctx.fill();
   // Glow
   ctx.beginPath();
   ctx.arc(tip.x, tip.y, LASER_DOT_RADIUS * 2.5, 0, Math.PI * 2);
   const glow = ctx.createRadialGradient(tip.x, tip.y, LASER_DOT_RADIUS * 0.5, tip.x, tip.y, LASER_DOT_RADIUS * 2.5);
-  glow.addColorStop(0, 'rgba(255, 60, 60, 0.4)');
-  glow.addColorStop(1, 'rgba(255, 60, 60, 0)');
+  glow.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.4)`);
+  glow.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
   ctx.fillStyle = glow;
   ctx.fill();
 
@@ -111,7 +122,7 @@ const toolbar = new Toolbar(
     canvasManager.clearActive();
   },
   () => {
-    api.sendEscapePressed();
+    api.sendQuitApp();
   },
   () => {
     if (engine.undo()) redrawPersistent();
@@ -133,6 +144,9 @@ const toolbar = new Toolbar(
   },
   () => {
     api.sendScreenshotToClipboard();
+  },
+  (color: string) => {
+    laserColor = color;
   },
 );
 

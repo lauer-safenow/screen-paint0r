@@ -35,7 +35,9 @@ export class Toolbar {
   private onColorPickerOpened: ActionCallback;
   private onColorPickerClosed: ActionCallback;
   private onScreenshot: ActionCallback;
+  private onLaserColorChanged: (color: string) => void;
   private customColor = '#ff6600';
+  private laserColor = '#fa8072';
   private pointerActive = false;
   private minimized = false;
 
@@ -56,6 +58,7 @@ export class Toolbar {
     onColorPickerOpened: ActionCallback,
     onColorPickerClosed: ActionCallback,
     onScreenshot: ActionCallback,
+    onLaserColorChanged: (color: string) => void,
   ) {
     this.onChange = onChange;
     this.onClear = onClear;
@@ -67,6 +70,7 @@ export class Toolbar {
     this.onColorPickerOpened = onColorPickerOpened;
     this.onColorPickerClosed = onColorPickerClosed;
     this.onScreenshot = onScreenshot;
+    this.onLaserColorChanged = onLaserColorChanged;
     this.el = document.createElement('div');
     this.el.className = 'toolbar';
     container.appendChild(this.el);
@@ -203,7 +207,7 @@ export class Toolbar {
     this.addSeparator();
 
     if (this.pointerActive) {
-      // Minimal toolbar: just pointer + draw
+      // Minimal toolbar: pointer + color picker + draw
       const pointerGroup = this.createGroup();
       const pointerBtn = document.createElement('button');
       pointerBtn.className = 'tool-btn active';
@@ -211,6 +215,34 @@ export class Toolbar {
       pointerBtn.title = 'Laser Pointer (active)';
       pointerBtn.addEventListener('click', this.onPointer);
       pointerGroup.appendChild(pointerBtn);
+
+      this.addSeparator();
+
+      // Laser color picker
+      const colorGroup = this.createGroup();
+      const wrapper = document.createElement('div');
+      wrapper.className = 'color-input-wrapper';
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = this.laserColor;
+      colorInput.addEventListener('click', () => this.onColorPickerOpened());
+      colorInput.addEventListener('change', (e) => {
+        this.laserColor = (e.target as HTMLInputElement).value;
+        this.onColorPickerClosed();
+        this.onLaserColorChanged(this.laserColor);
+        this.render();
+      });
+      colorInput.addEventListener('input', (e) => {
+        this.laserColor = (e.target as HTMLInputElement).value;
+        this.onLaserColorChanged(this.laserColor);
+      });
+      const inputDot = document.createElement('div');
+      inputDot.className = 'color-input-dot';
+      inputDot.style.background = this.laserColor;
+      inputDot.style.border = '2px solid #fff';
+      wrapper.appendChild(colorInput);
+      wrapper.appendChild(inputDot);
+      colorGroup.appendChild(wrapper);
 
       this.addSeparator();
 

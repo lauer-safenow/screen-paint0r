@@ -22,6 +22,7 @@ export interface ScreenPaintApi {
   onLaserModeChanged: (callback: (active: boolean) => void) => void;
   onKeybindings: (callback: (keybindings: Record<string, string>) => void) => void;
   sendEscapePressed: () => void;
+  sendQuitApp: () => void;
   sendToggleLaser: () => void;
   sendToggleDraw: () => void;
   sendColorPickerOpened: () => void;

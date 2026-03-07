@@ -116,4 +116,7 @@ const prefsHtml = `<!DOCTYPE html>
 
 fs.writeFileSync(`${DIST}/preferences.html`, prefsHtml);
 
+// Copy tray icon
+fs.copyFileSync('assets/icon.png', `${DIST}/tray-icon.png`);
+
 console.log('Build complete → dist/');

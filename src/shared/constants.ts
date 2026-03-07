@@ -9,4 +9,5 @@ export const IPC_CHANNELS = {
   COLOR_PICKER_OPENED: 'color-picker-opened',
   COLOR_PICKER_CLOSED: 'color-picker-closed',
   SCREENSHOT_TO_CLIPBOARD: 'screenshot-to-clipboard',
+  QUIT_APP: 'quit-app',
 } as const;

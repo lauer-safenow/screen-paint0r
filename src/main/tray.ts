@@ -1,6 +1,6 @@
-import { Tray, Menu, app } from 'electron';
-import { createTrayIcon } from './create-icon';
+import { Tray, Menu, app, nativeImage } from 'electron';
 import { Keybindings } from '../shared/keybindings';
+import path from 'node:path';
 
 let tray: Tray | null = null;
 
@@ -18,7 +18,8 @@ export function createTray(
   keybindings?: Keybindings,
 ) {
   if (!tray) {
-    const icon = createTrayIcon();
+    const iconPath = path.join(__dirname, 'tray-icon.png');
+    const icon = nativeImage.createFromPath(iconPath).resize({ width: 18, height: 18 });
     tray = new Tray(icon);
     tray.setToolTip('Screen Paint0r');
   }

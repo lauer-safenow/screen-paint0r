@@ -1,7 +1,4 @@
 import { nativeImage } from 'electron';
-import path from 'node:path';
-import fs from 'node:fs';
-import os from 'node:os';
 
 // Minimal PNG encoder for RGBA pixel data
 function encodePNG(width: number, height: number, rgba: Buffer): Buffer {
@@ -128,17 +125,16 @@ function drawIcon(size: number): Buffer {
 }
 
 export function createTrayIcon(): Electron.NativeImage {
-  const size = 22;
+  // Render at 2x for Retina, macOS tray expects ~18x18 logical
+  const size = 36;
   const rgba = drawIcon(size);
   const png = encodePNG(size, size, rgba);
 
-  const tmpPath = path.join(os.tmpdir(), 'screen-paint0r-tray.png');
-  fs.writeFileSync(tmpPath, png);
-
-  const img = nativeImage.createFromPath(tmpPath);
-  if (process.platform === 'darwin') {
-    img.setTemplateImage(true);
-  }
+  const img = nativeImage.createFromBuffer(Buffer.from(png), {
+    width: size,
+    height: size,
+    scaleFactor: 2.0,
+  });
   return img;
 }
 
@@ -147,8 +143,5 @@ export function createDockIcon(): Electron.NativeImage {
   const rgba = drawIcon(size);
   const png = encodePNG(size, size, rgba);
 
-  const tmpPath = path.join(os.tmpdir(), 'screen-paint0r-dock.png');
-  fs.writeFileSync(tmpPath, png);
-
-  return nativeImage.createFromPath(tmpPath);
+  return nativeImage.createFromBuffer(Buffer.from(png), { width: size, height: size });
 }

@@ -314,7 +314,6 @@ if (!gotLock) {
         toggleDrawMode();
       });
 
-      log('Creating tray...');
       trayRef = createTray(
         () => toggleDrawMode(),
         () => clearAll(),
@@ -322,7 +321,7 @@ if (!gotLock) {
         () => openPreferences(),
         currentKeybindings,
       );
-      log('Tray created. App fully initialized.');
+      log('App fully initialized.');
 
       // Color picker: temporarily lower overlay so native picker is visible
       ipcMain.on(IPC_CHANNELS.COLOR_PICKER_OPENED, () => {
@@ -381,6 +380,11 @@ if (!gotLock) {
 
       ipcMain.on(IPC_CHANNELS.TOGGLE_DRAW, () => {
         toggleDrawMode();
+      });
+
+      ipcMain.on(IPC_CHANNELS.QUIT_APP, () => {
+        log('Quit requested from toolbar');
+        app.quit();
       });
 
       ipcMain.on(IPC_CHANNELS.ESCAPE_PRESSED, () => {
