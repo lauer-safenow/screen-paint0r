@@ -8,6 +8,9 @@ import { Keybindings, DEFAULT_KEYBINDINGS, GLOBAL_SHORTCUT_KEYS } from '../share
 import fs from 'node:fs';
 import path from 'node:path';
 
+declare const __APP_VERSION__: string;
+declare const __COMMIT_HASH__: string;
+
 app.setName('Screen Paint0r');
 
 const LOG_FILE = path.join(app.getPath('userData'), 'screen-paint0r.log');
@@ -80,6 +83,7 @@ function saveKeybindings(kb: Keybindings) {
 }
 
 let overlayWindow: BrowserWindow | null = null;
+let trayRef: Electron.Tray | null = null; // prevent GC
 let drawModeActive = false;
 let laserModeActive = false;
 let currentKeybindings: Keybindings;
@@ -94,6 +98,7 @@ function toggleDrawMode() {
   if (overlayWindow) {
     setDrawMode(overlayWindow, drawModeActive);
     overlayWindow.webContents.send(IPC_CHANNELS.DRAW_MODE_CHANGED, drawModeActive);
+    if (drawModeActive) app.focus({ steal: true });
   }
 }
 
@@ -107,6 +112,7 @@ function toggleLaserMode() {
   if (overlayWindow) {
     setDrawMode(overlayWindow, laserModeActive);
     overlayWindow.webContents.send(IPC_CHANNELS.LASER_MODE_CHANGED, laserModeActive);
+    if (laserModeActive) app.focus({ steal: true });
   }
 }
 
@@ -265,13 +271,15 @@ if (!gotLock) {
           submenu: [
             {
               label: 'About Screen Paint0r',
-              click: () => {
-                dialog.showMessageBox({
+              click: async () => {
+                overlayWindow?.setAlwaysOnTop(true, 'floating');
+                await dialog.showMessageBox({
                   type: 'info',
                   title: 'About Screen Paint0r',
                   message: 'Screen Paint0r',
-                  detail: 'This is the Screen Paint0r, it paint0rs and point0rs on the screen.\n\nBy Andi Lauer.\nmail me : lauer AT safenow DOT de\nhttps://github.com/lauer-safenow/screen-paint0r',
+                  detail: `Version ${__APP_VERSION__} (${__COMMIT_HASH__})\n\nThis is the Screen Paint0r, it paint0rs and point0rs on the screen.\n\nBy Andi Lauer.\nmail me : lauer AT safenow DOT de\nhttps://github.com/lauer-safenow/screen-paint0r`,
                 });
+                overlayWindow?.setAlwaysOnTop(true, 'screen-saver');
               },
             },
             { type: 'separator' },
@@ -307,7 +315,7 @@ if (!gotLock) {
       });
 
       log('Creating tray...');
-      createTray(
+      trayRef = createTray(
         () => toggleDrawMode(),
         () => clearAll(),
         () => toggleLaserMode(),
@@ -344,7 +352,7 @@ if (!gotLock) {
         saveKeybindings(sanitized);
         applyKeybindings(sanitized);
         // Rebuild tray with new labels
-        createTray(
+        trayRef = createTray(
           () => toggleDrawMode(),
           () => clearAll(),
           () => toggleLaserMode(),
@@ -357,7 +365,7 @@ if (!gotLock) {
         const defaults = { ...DEFAULT_KEYBINDINGS };
         saveKeybindings(defaults);
         applyKeybindings(defaults);
-        createTray(
+        trayRef = createTray(
           () => toggleDrawMode(),
           () => clearAll(),
           () => toggleLaserMode(),

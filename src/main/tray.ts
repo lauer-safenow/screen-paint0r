@@ -38,4 +38,5 @@ export function createTray(
   ]);
 
   tray.setContextMenu(contextMenu);
+  return tray;
 }

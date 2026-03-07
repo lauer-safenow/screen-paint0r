@@ -1,8 +1,13 @@
 import * as esbuild from 'esbuild';
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 const DIST = 'dist';
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+const APP_VERSION = pkg.version || 'DEV';
+let COMMIT_HASH = 'DEV';
+try { COMMIT_HASH = execSync('git rev-parse --short HEAD').toString().trim(); } catch {};
 
 // Clean
 fs.rmSync(DIST, { recursive: true, force: true });
@@ -20,6 +25,8 @@ await esbuild.build({
   define: {
     'MAIN_WINDOW_VITE_DEV_SERVER_URL': 'undefined',
     'MAIN_WINDOW_VITE_NAME': 'undefined',
+    '__APP_VERSION__': JSON.stringify(APP_VERSION),
+    '__COMMIT_HASH__': JSON.stringify(COMMIT_HASH),
   },
 });
 
