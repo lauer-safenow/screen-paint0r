@@ -7,9 +7,9 @@
   "private": true,
   "scripts": {
     "build": "node build.mjs",
-    "start": "node build.mjs && npx electron .",
+    "start": "node build.mjs && node generate-icons.mjs && cp assets/icon.png dist/tray-icon.png && npx electron .",
     "icons": "node generate-icons.mjs",
-    "pack": "npm run build && npm run icons && npx electron-packager . \"Screen Paint0r\" --platform=darwin --arch=arm64 --out=release --overwrite --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\" && cp assets/icon.icns \"release/Screen Paint0r-darwin-arm64/Screen Paint0r.app/Contents/Resources/electron.icns\"",
+    "pack": "npm run build && npm run icons && cp assets/icon.png dist/tray-icon.png && npx electron-packager . \"Screen Paint0r\" --platform=darwin --arch=arm64 --out=release --overwrite --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\" && cp assets/icon.icns \"release/Screen Paint0r-darwin-arm64/Screen Paint0r.app/Contents/Resources/electron.icns\"",
     "pack:linux": "npm run build && npm run icons && npx electron-packager . \"screen-paint0r\" --platform=linux --arch=x64 --out=release --overwrite --icon=assets/icon.png --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\"",
     "pack:all": "npm run pack && npm run pack:linux",
     "dmg": "npm run pack && hdiutil create -volname \"Screen Paint0r\" -srcfolder \"release/Screen Paint0r-darwin-arm64/Screen Paint0r.app\" -ov -format UDZO \"release/Screen-Paint0r-$(node -p 'require(\"./package.json\").version').dmg\""
