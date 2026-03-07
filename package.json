@@ -1,7 +1,7 @@
 {
   "name": "screen-paint0r",
   "productName": "screen-paint0r",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Draw on your screen with global shortcuts",
   "main": "dist/main.js",
   "private": true,
@@ -11,7 +11,8 @@
     "icons": "node generate-icons.mjs",
     "pack": "npm run build && npm run icons && npx electron-packager . \"Screen Paint0r\" --platform=darwin --arch=arm64 --out=release --overwrite --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\" && cp assets/icon.icns \"release/Screen Paint0r-darwin-arm64/Screen Paint0r.app/Contents/Resources/electron.icns\"",
     "pack:linux": "npm run build && npm run icons && npx electron-packager . \"screen-paint0r\" --platform=linux --arch=x64 --out=release --overwrite --icon=assets/icon.png --ignore=\"(src|generate-icons|generate-icns|tsconfig|forge\\.config|vite\\.|assets|release|PKGBUILD|\\.desktop$)\"",
-    "pack:all": "npm run pack && npm run pack:linux"
+    "pack:all": "npm run pack && npm run pack:linux",
+    "dmg": "npm run pack && hdiutil create -volname \"Screen Paint0r\" -srcfolder \"release/Screen Paint0r-darwin-arm64/Screen Paint0r.app\" -ov -format UDZO \"release/Screen-Paint0r-$(node -p 'require(\"./package.json\").version').dmg\""
   },
   "keywords": [],
   "author": {

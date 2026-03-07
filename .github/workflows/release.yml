@@ -1,0 +1,69 @@
+name: Release & Update Homebrew
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app and create DMG
+        run: npm run dmg
+
+      - name: Get version
+        id: version
+        run: echo "version=$(node -p 'require("./package.json").version')" >> $GITHUB_OUTPUT
+
+      - name: Compute SHA256
+        id: sha
+        run: echo "sha256=$(shasum -a 256 "release/Screen-Paint0r-${{ steps.version.outputs.version }}.dmg" | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/Screen-Paint0r-${{ steps.version.outputs.version }}.dmg
+          generate_release_notes: true
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA="${{ steps.sha.outputs.sha256 }}"
+
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/lauer-safenow/homebrew-tap.git tap
+          cd tap
+
+          cat > Casks/screen-paint0r.rb << CASK
+          cask "screen-paint0r" do
+            version "${VERSION}"
+            sha256 "${SHA}"
+
+            url "https://github.com/lauer-safenow/screen-paint0r/releases/download/v#{version}/Screen-Paint0r-#{version}.dmg"
+            name "Screen Paint0r"
+            desc "Screen drawing and annotation overlay"
+            homepage "https://github.com/lauer-safenow/screen-paint0r"
+
+            app "Screen Paint0r.app"
+          end
+          CASK
+
+          # Remove leading whitespace from heredoc
+          sed -i '' 's/^          //' Casks/screen-paint0r.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/screen-paint0r.rb
+          git commit -m "Update screen-paint0r to ${VERSION}"
+          git push
