@@ -23,4 +23,19 @@ contextBridge.exposeInMainWorld('screenPaintApi', {
   sendToggleDraw: () => {
     ipcRenderer.send(IPC_CHANNELS.TOGGLE_DRAW);
   },
+  sendColorPickerOpened: () => {
+    ipcRenderer.send(IPC_CHANNELS.COLOR_PICKER_OPENED);
+  },
+  sendColorPickerClosed: () => {
+    ipcRenderer.send(IPC_CHANNELS.COLOR_PICKER_CLOSED);
+  },
+  sendScreenshotToClipboard: () => {
+    ipcRenderer.send(IPC_CHANNELS.SCREENSHOT_TO_CLIPBOARD);
+  },
+  onHideToolbarForScreenshot: (callback: () => void) => {
+    ipcRenderer.on('hide-toolbar-for-screenshot', () => callback());
+  },
+  onShowToolbarAfterScreenshot: (callback: () => void) => {
+    ipcRenderer.on('show-toolbar-after-screenshot', () => callback());
+  },
 });

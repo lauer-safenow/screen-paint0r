@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, dialog, clipboard, nativeImage, desktopCapturer, screen } from 'electron';
 import { createOverlayWindow, setDrawMode } from './overlay-window';
 import { createTray } from './tray';
 import { createDockIcon } from './create-icon';
@@ -116,10 +116,86 @@ function clearAll() {
   }
 }
 
+async function takeScreenshot() {
+  if (!overlayWindow) return;
+  try {
+    // Hide toolbar by sending a message to renderer
+    overlayWindow.webContents.send('hide-toolbar-for-screenshot');
+    await new Promise(r => setTimeout(r, 100));
+
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.size;
+    const scaleFactor = primaryDisplay.scaleFactor;
+
+    // Capture the screen (behind overlay)
+    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+    overlayWindow.hide();
+    await new Promise(r => setTimeout(r, 100));
+
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: width * scaleFactor, height: height * scaleFactor },
+    });
+
+    // Show overlay again
+    overlayWindow.show();
+    if (drawModeActive || laserModeActive) {
+      overlayWindow.setIgnoreMouseEvents(false);
+    }
+
+    if (sources.length === 0) {
+      log('Screenshot: no sources found');
+      overlayWindow.webContents.send('show-toolbar-after-screenshot');
+      return;
+    }
+
+    const screenImage = sources[0].thumbnail;
+    const overlayImage = await overlayWindow.webContents.capturePage();
+
+    const screenSize = screenImage.getSize();
+    const overlaySize = overlayImage.getSize();
+    const screenBuf = screenImage.toBitmap();
+    const overlayBuf = overlayImage.toBitmap();
+
+    const sw = screenSize.width;
+    const sh = screenSize.height;
+    const ow = overlaySize.width;
+    const oh = overlaySize.height;
+    const composited = Buffer.from(screenBuf);
+
+    const blendW = Math.min(sw, ow);
+    const blendH = Math.min(sh, oh);
+
+    for (let y = 0; y < blendH; y++) {
+      for (let x = 0; x < blendW; x++) {
+        const si = (y * sw + x) * 4;
+        const oi = (y * ow + x) * 4;
+        const srcA = overlayBuf[oi + 3] / 255;
+        if (srcA > 0) {
+          composited[si]     = Math.round(overlayBuf[oi] * srcA + composited[si] * (1 - srcA));
+          composited[si + 1] = Math.round(overlayBuf[oi + 1] * srcA + composited[si + 1] * (1 - srcA));
+          composited[si + 2] = Math.round(overlayBuf[oi + 2] * srcA + composited[si + 2] * (1 - srcA));
+          composited[si + 3] = 255;
+        }
+      }
+    }
+
+    const result = nativeImage.createFromBitmap(composited, { width: sw, height: sh });
+    clipboard.writeImage(result);
+    log('Screenshot copied to clipboard');
+
+    overlayWindow.webContents.send('show-toolbar-after-screenshot');
+  } catch (err) {
+    log(`Screenshot error: ${err}`);
+    overlayWindow?.webContents.send('show-toolbar-after-screenshot');
+  }
+}
+
 const GLOBAL_ACTIONS: Record<string, () => void> = {
   toggleDraw: toggleDrawMode,
   togglePointer: toggleLaserMode,
   clearAll: clearAll,
+  screenshot: takeScreenshot,
 };
 
 function registerGlobalShortcuts(kb: Keybindings) {
@@ -187,7 +263,17 @@ if (!gotLock) {
         {
           label: app.name,
           submenu: [
-            { label: 'About Screen Paint0r', role: 'about' },
+            {
+              label: 'About Screen Paint0r',
+              click: () => {
+                dialog.showMessageBox({
+                  type: 'info',
+                  title: 'About Screen Paint0r',
+                  message: 'Screen Paint0r',
+                  detail: 'This is the Screen Paint0r, it paint0rs and point0rs on the screen.\n\nBy Andi Lauer.\nmail me : lauer AT safenow DOT de\nhttps://github.com/lauer-safenow/screen-paint0r',
+                });
+              },
+            },
             { type: 'separator' },
             {
               label: 'Preferences…',
@@ -228,6 +314,24 @@ if (!gotLock) {
         currentKeybindings,
       );
       log('Tray created. App fully initialized.');
+
+      // Color picker: temporarily lower overlay so native picker is visible
+      ipcMain.on(IPC_CHANNELS.COLOR_PICKER_OPENED, () => {
+        if (overlayWindow) {
+          overlayWindow.setAlwaysOnTop(true, 'floating');
+        }
+      });
+
+      ipcMain.on(IPC_CHANNELS.COLOR_PICKER_CLOSED, () => {
+        if (overlayWindow) {
+          overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+        }
+      });
+
+      // Screenshot to clipboard
+      ipcMain.on(IPC_CHANNELS.SCREENSHOT_TO_CLIPBOARD, () => {
+        takeScreenshot();
+      });
 
       // Preferences IPC handlers
       ipcMain.handle('get-keybindings', () => {

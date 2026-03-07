@@ -6,4 +6,7 @@ export const IPC_CHANNELS = {
   TOGGLE_LASER: 'toggle-laser',
   TOGGLE_DRAW: 'toggle-draw',
   KEYBINDINGS: 'keybindings',
+  COLOR_PICKER_OPENED: 'color-picker-opened',
+  COLOR_PICKER_CLOSED: 'color-picker-closed',
+  SCREENSHOT_TO_CLIPBOARD: 'screenshot-to-clipboard',
 } as const;

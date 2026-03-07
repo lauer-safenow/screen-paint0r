@@ -3,6 +3,7 @@ export interface Keybindings {
   toggleDraw: string;
   togglePointer: string;
   clearAll: string;
+  screenshot: string;
   // Local shortcuts (key + modifiers)
   undo: string;
   redo: string;
@@ -15,6 +16,7 @@ export const DEFAULT_KEYBINDINGS: Keybindings = {
   toggleDraw: isMac ? 'Command+Option+Control+D' : 'Ctrl+Alt+Shift+D',
   togglePointer: isMac ? 'Command+Option+Control+P' : 'Ctrl+Alt+Shift+P',
   clearAll: isMac ? 'Command+Option+Control+C' : 'Ctrl+Alt+Shift+C',
+  screenshot: isMac ? 'Command+Option+Control+S' : 'Ctrl+Alt+Shift+S',
   undo: isMac ? 'Command+Z' : 'Ctrl+Z',
   redo: isMac ? 'Command+Y' : 'Ctrl+Y',
   minimizeMenu: isMac ? 'Command+M' : 'Ctrl+M',
@@ -22,7 +24,7 @@ export const DEFAULT_KEYBINDINGS: Keybindings = {
 
 // Global shortcuts are registered by main process via Electron globalShortcut
 export const GLOBAL_SHORTCUT_KEYS: (keyof Keybindings)[] = [
-  'toggleDraw', 'togglePointer', 'clearAll',
+  'toggleDraw', 'togglePointer', 'clearAll', 'screenshot',
 ];
 
 // Local shortcuts are handled in the renderer via keydown events

@@ -152,14 +152,77 @@
   background: rgba(239, 68, 68, 0.5);
 }
 
-.toolbar-drag-handle {
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 18px;
-  cursor: grab;
-  padding: 0 4px;
-  line-height: 1;
+.traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
 }
 
-.toolbar-drag-handle:active {
-  cursor: grabbing;
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: filter 0.15s;
+  position: relative;
+}
+
+.traffic-light:hover {
+  filter: brightness(1.3);
+}
+
+.traffic-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.traffic-red {
+  background: #ff5f57;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+}
+
+.traffic-red:hover::after {
+  content: '\00d7';
+  opacity: 1;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.traffic-yellow {
+  background: #febc2e;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+}
+
+.traffic-yellow:hover::after {
+  content: '\2013';
+  opacity: 1;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.traffic-green {
+  background: #28c840;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+}
+
+.traffic-green.disabled {
+  background: #555;
+  border-color: rgba(0, 0, 0, 0.2);
+  cursor: default;
+}
+
+.traffic-green.disabled:hover {
+  filter: none;
 }

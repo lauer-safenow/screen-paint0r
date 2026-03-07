@@ -8,7 +8,7 @@ export interface ToolbarState {
 type ToolbarChangeCallback = (state: ToolbarState) => void;
 type ActionCallback = () => void;
 
-const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#ffffff', '#000000'];
+const COLORS = ['#ffffff', '#000000', '#3b82f6', '#eab308', '#ef4444'];
 const WIDTHS = [2, 4, 8];
 
 const TOOL_ICONS: Record<ToolType, string> = {
@@ -23,7 +23,7 @@ export class Toolbar {
   private el: HTMLDivElement;
   private state: ToolbarState = {
     activeTool: 'freehand',
-    style: { color: '#ef4444', width: 4 },
+    style: { color: '#ffffff', width: 4 },
   };
   private onChange: ToolbarChangeCallback;
   private onClear: ActionCallback;
@@ -32,6 +32,9 @@ export class Toolbar {
   private onRedo: ActionCallback;
   private onPointer: ActionCallback;
   private onSwitchToDraw: ActionCallback;
+  private onColorPickerOpened: ActionCallback;
+  private onColorPickerClosed: ActionCallback;
+  private onScreenshot: ActionCallback;
   private customColor = '#ff6600';
   private pointerActive = false;
   private minimized = false;
@@ -50,6 +53,9 @@ export class Toolbar {
     onRedo: ActionCallback,
     onPointer: ActionCallback,
     onSwitchToDraw: ActionCallback,
+    onColorPickerOpened: ActionCallback,
+    onColorPickerClosed: ActionCallback,
+    onScreenshot: ActionCallback,
   ) {
     this.onChange = onChange;
     this.onClear = onClear;
@@ -58,6 +64,9 @@ export class Toolbar {
     this.onRedo = onRedo;
     this.onPointer = onPointer;
     this.onSwitchToDraw = onSwitchToDraw;
+    this.onColorPickerOpened = onColorPickerOpened;
+    this.onColorPickerClosed = onColorPickerClosed;
+    this.onScreenshot = onScreenshot;
     this.el = document.createElement('div');
     this.el.className = 'toolbar';
     container.appendChild(this.el);
@@ -121,7 +130,7 @@ export class Toolbar {
     this.el.addEventListener('mousedown', (e) => {
       const target = e.target as HTMLElement;
       // Only drag from the toolbar background / drag handle, not from buttons
-      if (target.closest('.tool-btn, .action-btn, .width-btn, .color-dot, .color-input-wrapper')) {
+      if (target.closest('.tool-btn, .action-btn, .width-btn, .color-dot, .color-input-wrapper, .traffic-light')) {
         return;
       }
       this.dragging = true;
@@ -139,28 +148,59 @@ export class Toolbar {
     return this.el.contains(e.target as Node);
   }
 
+  private renderTrafficLights() {
+    const group = document.createElement('div');
+    group.className = 'traffic-lights';
+
+    const close = document.createElement('div');
+    close.className = 'traffic-light traffic-red';
+    close.title = 'Close';
+    close.addEventListener('click', this.onDone);
+
+    group.appendChild(close);
+
+    if (this.minimized) {
+      // When minimized: green button to expand
+      const expand = document.createElement('div');
+      expand.className = 'traffic-light traffic-green';
+      expand.title = 'Expand';
+      expand.addEventListener('click', () => {
+        this.minimized = false;
+        this.render();
+      });
+      group.appendChild(expand);
+    } else {
+      // When expanded: yellow button to minimize
+      const minimize = document.createElement('div');
+      minimize.className = 'traffic-light traffic-yellow';
+      minimize.title = 'Minimize';
+      minimize.addEventListener('click', () => {
+        this.minimized = true;
+        this.render();
+      });
+      group.appendChild(minimize);
+    }
+
+    this.el.appendChild(group);
+  }
+
   private render() {
     this.el.innerHTML = '';
 
-    // Drag handle
+    // Drag handle (always visible)
     const handle = document.createElement('div');
     handle.className = 'toolbar-drag-handle';
     handle.textContent = '\u2261';
     this.el.appendChild(handle);
 
+    // Traffic lights
+    this.renderTrafficLights();
+
     if (this.minimized) {
-      // Minimized: just a small expand button
-      const expandBtn = document.createElement('button');
-      expandBtn.className = 'tool-btn';
-      expandBtn.textContent = '\u25B6';
-      expandBtn.title = 'Show toolbar';
-      expandBtn.addEventListener('click', () => {
-        this.minimized = false;
-        this.render();
-      });
-      this.el.appendChild(expandBtn);
       return;
     }
+
+    this.addSeparator();
 
     if (this.pointerActive) {
       // Minimal toolbar: just pointer + draw
@@ -221,10 +261,19 @@ export class Toolbar {
     const colorInput = document.createElement('input');
     colorInput.type = 'color';
     colorInput.value = this.customColor;
+    colorInput.addEventListener('click', () => {
+      this.onColorPickerOpened();
+    });
+    colorInput.addEventListener('change', (e) => {
+      this.customColor = (e.target as HTMLInputElement).value;
+      this.state.style.color = this.customColor;
+      this.onColorPickerClosed();
+      this.render();
+      this.onChange(this.state);
+    });
     colorInput.addEventListener('input', (e) => {
       this.customColor = (e.target as HTMLInputElement).value;
       this.state.style.color = this.customColor;
-      this.render();
       this.onChange(this.state);
     });
     const colorDot = document.createElement('div');
@@ -289,17 +338,19 @@ export class Toolbar {
 
     // Action buttons
     const actionGroup = this.createGroup();
+
+    const screenshotBtn = document.createElement('button');
+    screenshotBtn.className = 'action-btn';
+    screenshotBtn.textContent = '\u{1F4CB}';
+    screenshotBtn.title = 'Screenshot to clipboard';
+    screenshotBtn.addEventListener('click', this.onScreenshot);
+    actionGroup.appendChild(screenshotBtn);
+
     const clearBtn = document.createElement('button');
     clearBtn.className = 'action-btn danger';
     clearBtn.textContent = 'Clear';
     clearBtn.addEventListener('click', this.onClear);
     actionGroup.appendChild(clearBtn);
-
-    const doneBtn = document.createElement('button');
-    doneBtn.className = 'action-btn';
-    doneBtn.textContent = 'Done';
-    doneBtn.addEventListener('click', this.onDone);
-    actionGroup.appendChild(doneBtn);
   }
 
   private createGroup(): HTMLDivElement {

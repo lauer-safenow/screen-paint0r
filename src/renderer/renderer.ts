@@ -38,7 +38,7 @@ const tools: Record<ToolType, Tool> = {
 };
 
 let currentTool: Tool = tools.freehand;
-let currentStyle: DrawingStyle = { color: '#ef4444', width: 4 };
+let currentStyle: DrawingStyle = { color: '#ffffff', width: 4 };
 let drawModeActive = false;
 let isDragging = false;
 let laserModeActive = false;
@@ -125,6 +125,15 @@ const toolbar = new Toolbar(
   () => {
     api.sendToggleDraw();
   },
+  () => {
+    api.sendColorPickerOpened();
+  },
+  () => {
+    api.sendColorPickerClosed();
+  },
+  () => {
+    api.sendScreenshotToClipboard();
+  },
 );
 
 // Mouse event handlers
@@ -206,6 +215,16 @@ api.onClearAll(() => {
   engine.clear();
   canvasManager.clearPersistent();
   canvasManager.clearActive();
+});
+
+api.onHideToolbarForScreenshot(() => {
+  toolbar.hide();
+});
+
+api.onShowToolbarAfterScreenshot(() => {
+  if (drawModeActive || laserModeActive) {
+    toolbar.show();
+  }
 });
 
 api.onLaserModeChanged((active) => {
