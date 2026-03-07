@@ -300,9 +300,10 @@ if (!gotLock) {
       ]);
       Menu.setApplicationMenu(appMenu);
 
-      // Send keybindings when renderer loads
+      // Send keybindings when renderer loads, then activate draw mode
       overlayWindow.webContents.on('did-finish-load', () => {
         overlayWindow?.webContents.send(IPC_CHANNELS.KEYBINDINGS, currentKeybindings);
+        toggleDrawMode();
       });
 
       log('Creating tray...');
