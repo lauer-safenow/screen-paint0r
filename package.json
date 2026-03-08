@@ -1,7 +1,7 @@
 {
   "name": "screen-paint0r",
   "productName": "screen-paint0r",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Draw on your screen with global shortcuts",
   "main": "dist/main.js",
   "private": true,
