@@ -228,7 +228,13 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (overlayWindow) {
+    if (overlayWindow && !drawModeActive && !laserModeActive) {
+      toggleDrawMode();
+    }
+  });
+
+  app.on('activate', () => {
+    if (overlayWindow && !drawModeActive && !laserModeActive) {
       toggleDrawMode();
     }
   });
