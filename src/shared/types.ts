@@ -28,6 +28,8 @@ export interface ScreenPaintApi {
   sendColorPickerOpened: () => void;
   sendColorPickerClosed: () => void;
   sendScreenshotToClipboard: () => void;
+  sendSetClickThrough: (clickThrough: boolean) => void;
   onHideToolbarForScreenshot: (callback: () => void) => void;
   onShowToolbarAfterScreenshot: (callback: () => void) => void;
+  onLaserClick: (callback: (x: number, y: number) => void) => void;
 }

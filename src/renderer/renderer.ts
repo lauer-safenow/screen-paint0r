@@ -54,6 +54,13 @@ const LASER_DOT_RADIUS = 6;
 let laserAnimFrame: number | null = null;
 let laserColor = '#fa8072'; // salmon
 
+// Radar pop animation state
+interface RadarPop { x: number; y: number; startTime: number; }
+const radarPops: RadarPop[] = [];
+const RADAR_DURATION = 500; // ms
+const RADAR_MAX_RADIUS = 40;
+const RADAR_RINGS = 2;
+
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const h = hex.replace('#', '');
   return {
@@ -107,7 +114,36 @@ function renderLaser() {
   ctx.fillStyle = glow;
   ctx.fill();
 
-  if (laserModeActive) laserAnimFrame = requestAnimationFrame(renderLaser);
+  // Draw radar pops
+  for (let i = radarPops.length - 1; i >= 0; i--) {
+    const pop = radarPops[i];
+    const age = now - pop.startTime;
+    if (age > RADAR_DURATION) {
+      radarPops.splice(i, 1);
+      continue;
+    }
+    const progress = age / RADAR_DURATION;
+    for (let ring = 0; ring < RADAR_RINGS; ring++) {
+      const ringDelay = ring * 0.15;
+      const ringProgress = Math.max(0, (progress - ringDelay) / (1 - ringDelay));
+      if (ringProgress <= 0) continue;
+      const radius = RADAR_MAX_RADIUS * ringProgress;
+      const alpha = (1 - ringProgress) * 0.8;
+      ctx.beginPath();
+      ctx.arc(pop.x, pop.y, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      ctx.lineWidth = 2 * (1 - ringProgress) + 0.5;
+      ctx.stroke();
+    }
+    // Center dot that fades
+    const dotAlpha = (1 - progress) * 0.9;
+    ctx.beginPath();
+    ctx.arc(pop.x, pop.y, 3 * (1 - progress) + 1, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${dotAlpha})`;
+    ctx.fill();
+  }
+
+  if (laserModeActive || radarPops.length > 0) laserAnimFrame = requestAnimationFrame(renderLaser);
 }
 
 const toolbar = new Toolbar(
@@ -149,6 +185,22 @@ const toolbar = new Toolbar(
     laserColor = color;
   },
 );
+
+// Toolbar hover: toggle click-through so toolbar stays interactive in laser mode
+let toolbarHovered = false;
+const toolbarEl = toolbar.getElement();
+toolbarEl.addEventListener('mouseenter', () => {
+  if (laserModeActive) {
+    toolbarHovered = true;
+    api.sendSetClickThrough(false);
+  }
+});
+toolbarEl.addEventListener('mouseleave', () => {
+  if (laserModeActive && toolbarHovered) {
+    toolbarHovered = false;
+    api.sendSetClickThrough(true);
+  }
+});
 
 // Mouse event handlers
 canvasManager.activeCanvas.addEventListener('mousedown', (e) => {
@@ -241,10 +293,20 @@ api.onShowToolbarAfterScreenshot(() => {
   }
 });
 
+api.onLaserClick((x, y) => {
+  if (!laserModeActive) return;
+  radarPops.push({ x, y, startTime: Date.now() });
+  // Ensure animation loop is running to render the pop
+  if (!laserAnimFrame) {
+    laserAnimFrame = requestAnimationFrame(renderLaser);
+  }
+});
+
 api.onLaserModeChanged((active) => {
   laserModeActive = active;
   canvasManager.setInteractive(active);
   toolbar.setPointerActive(active);
+  toolbarHovered = false;
   if (active) {
     toolbar.setMinimized(false);
     toolbar.show();
@@ -255,6 +317,7 @@ api.onLaserModeChanged((active) => {
     if (laserAnimFrame) cancelAnimationFrame(laserAnimFrame);
     laserAnimFrame = null;
     laserTrail.length = 0;
+    radarPops.length = 0;
     canvasManager.clearActive();
   }
 });

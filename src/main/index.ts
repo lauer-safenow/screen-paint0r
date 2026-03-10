@@ -1,17 +1,20 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, dialog, clipboard, nativeImage, desktopCapturer, screen } from 'electron';
-import { createOverlayWindow, setDrawMode } from './overlay-window';
+import { createOverlayWindow, setDrawMode, setLaserMode } from './overlay-window';
 import { createTray } from './tray';
 import { createDockIcon } from './create-icon';
 import { openPreferences } from './preferences-window';
 import { IPC_CHANNELS } from '../shared/constants';
 import { Keybindings, DEFAULT_KEYBINDINGS, GLOBAL_SHORTCUT_KEYS } from '../shared/keybindings';
+import { ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createInterface } from 'node:readline';
 
 declare const __APP_VERSION__: string;
 declare const __COMMIT_HASH__: string;
 
-app.setName('Screen Paint0r');
+const isDev = !app.isPackaged;
+app.setName(isDev ? 'Screen Paint0r (DEV)' : 'Screen Paint0r');
 
 const LOG_FILE = path.join(app.getPath('userData'), 'screen-paint0r.log');
 const CONFIG_DIR = path.join(app.getPath('userData'), 'config');
@@ -87,6 +90,43 @@ let trayRef: Electron.Tray | null = null; // prevent GC
 let drawModeActive = false;
 let laserModeActive = false;
 let currentKeybindings: Keybindings;
+let clickMonitorProc: ChildProcess | null = null;
+
+function startClickMonitor() {
+  if (clickMonitorProc) return;
+  const binPath = path.join(__dirname, 'click-monitor');
+  if (!fs.existsSync(binPath)) {
+    log('click-monitor binary not found, pointer ping disabled');
+    return;
+  }
+  try {
+    clickMonitorProc = spawn(binPath, [], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const rl = createInterface({ input: clickMonitorProc.stdout! });
+    rl.on('line', (line) => {
+      if (!laserModeActive || !overlayWindow) return;
+      const parts = line.split(',');
+      if (parts.length !== 2) return;
+      const sx = parseFloat(parts[0]);
+      const sy = parseFloat(parts[1]);
+      if (isNaN(sx) || isNaN(sy)) return;
+      const bounds = overlayWindow.getBounds();
+      overlayWindow.webContents.send(IPC_CHANNELS.LASER_CLICK, sx - bounds.x, sy - bounds.y);
+    });
+    clickMonitorProc.on('exit', () => { clickMonitorProc = null; });
+    log('click-monitor started');
+  } catch (e) {
+    log(`Failed to start click-monitor: ${e}`);
+    clickMonitorProc = null;
+  }
+}
+
+function stopClickMonitor() {
+  if (clickMonitorProc) {
+    clickMonitorProc.kill('SIGTERM');
+    clickMonitorProc = null;
+    log('click-monitor stopped');
+  }
+}
 
 function toggleDrawMode() {
   if (laserModeActive) {
@@ -110,7 +150,13 @@ function toggleLaserMode() {
   laserModeActive = !laserModeActive;
   log(`Laser mode: ${laserModeActive}`);
   if (overlayWindow) {
-    setDrawMode(overlayWindow, laserModeActive);
+    if (laserModeActive) {
+      setLaserMode(overlayWindow, true);
+      startClickMonitor();
+    } else {
+      setDrawMode(overlayWindow, false);
+      stopClickMonitor();
+    }
     overlayWindow.webContents.send(IPC_CHANNELS.LASER_MODE_CHANGED, laserModeActive);
     if (laserModeActive) app.focus({ steal: true });
   }
@@ -380,6 +426,15 @@ if (!gotLock) {
         return defaults;
       });
 
+      ipcMain.on(IPC_CHANNELS.SET_CLICK_THROUGH, (_event, clickThrough: boolean) => {
+        if (!overlayWindow) return;
+        if (clickThrough) {
+          overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+        } else {
+          overlayWindow.setIgnoreMouseEvents(false);
+        }
+      });
+
       ipcMain.on(IPC_CHANNELS.TOGGLE_LASER, () => {
         toggleLaserMode();
       });
@@ -416,6 +471,7 @@ if (!gotLock) {
 
   app.on('before-quit', () => {
     log('Quitting');
+    stopClickMonitor();
     globalShortcut.unregisterAll();
   });
 

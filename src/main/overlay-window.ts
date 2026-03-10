@@ -82,3 +82,9 @@ export function setDrawMode(win: BrowserWindow, active: boolean) {
     win.setIgnoreMouseEvents(true, { forward: true });
   }
 }
+
+export function setLaserMode(win: BrowserWindow, active: boolean) {
+  // Laser mode: clicks pass through to apps below, mouse moves still tracked
+  win.setIgnoreMouseEvents(true, { forward: true });
+  if (active) win.focus();
+}

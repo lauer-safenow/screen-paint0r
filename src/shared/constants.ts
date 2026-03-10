@@ -10,4 +10,6 @@ export const IPC_CHANNELS = {
   COLOR_PICKER_CLOSED: 'color-picker-closed',
   SCREENSHOT_TO_CLIPBOARD: 'screenshot-to-clipboard',
   QUIT_APP: 'quit-app',
+  SET_CLICK_THROUGH: 'set-click-through',
+  LASER_CLICK: 'laser-click',
 } as const;

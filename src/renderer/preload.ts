@@ -35,10 +35,16 @@ contextBridge.exposeInMainWorld('screenPaintApi', {
   sendScreenshotToClipboard: () => {
     ipcRenderer.send(IPC_CHANNELS.SCREENSHOT_TO_CLIPBOARD);
   },
+  sendSetClickThrough: (clickThrough: boolean) => {
+    ipcRenderer.send(IPC_CHANNELS.SET_CLICK_THROUGH, clickThrough);
+  },
   onHideToolbarForScreenshot: (callback: () => void) => {
     ipcRenderer.on('hide-toolbar-for-screenshot', () => callback());
   },
   onShowToolbarAfterScreenshot: (callback: () => void) => {
     ipcRenderer.on('show-toolbar-after-screenshot', () => callback());
+  },
+  onLaserClick: (callback: (x: number, y: number) => void) => {
+    ipcRenderer.on(IPC_CHANNELS.LASER_CLICK, (_event, x: number, y: number) => callback(x, y));
   },
 });

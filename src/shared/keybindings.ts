@@ -18,7 +18,7 @@ export const DEFAULT_KEYBINDINGS: Keybindings = {
   clearAll: isMac ? 'Command+Option+Control+C' : 'Ctrl+Alt+Shift+C',
   screenshot: isMac ? 'Command+Option+Control+S' : 'Ctrl+Alt+Shift+S',
   undo: isMac ? 'Command+Z' : 'Ctrl+Z',
-  redo: isMac ? 'Command+Y' : 'Ctrl+Y',
+  redo: isMac ? 'Command+Shift+Z' : 'Ctrl+Y',
   minimizeMenu: isMac ? 'Command+M' : 'Ctrl+M',
 };
 
@@ -34,7 +34,9 @@ export const LOCAL_SHORTCUT_KEYS: (keyof Keybindings)[] = [
 
 /**
  * Parse an accelerator string into components for matching KeyboardEvent.
- * Uses e.code (physical key) to avoid macOS composed characters (e.g. Option+B = ∫).
+ * Uses e.key (labeled character) by default so shortcuts match keyboard layout.
+ * Falls back to e.code (physical key) only for Option/Alt combos where
+ * macOS produces composed characters (e.g. Option+B = ∫).
  */
 export function matchesAccelerator(e: KeyboardEvent, accelerator: string): boolean {
   const parts = accelerator.split('+').map(p => p.trim());
@@ -52,18 +54,9 @@ export function matchesAccelerator(e: KeyboardEvent, accelerator: string): boole
   if (e.altKey !== needAlt) return false;
   if (e.shiftKey !== needShift) return false;
 
-  // Match against e.code (physical key) to handle Option+key combos
   const keyUpper = key.toUpperCase();
 
-  // Single letter: match KeyA, KeyB, etc.
-  if (keyUpper.length === 1 && keyUpper >= 'A' && keyUpper <= 'Z') {
-    return e.code === 'Key' + keyUpper;
-  }
-  // Single digit
-  if (keyUpper.length === 1 && keyUpper >= '0' && keyUpper <= '9') {
-    return e.code === 'Digit' + keyUpper;
-  }
-  // Special keys
+  // Special keys: always match via e.code
   const specialMap: Record<string, string> = {
     'SPACE': 'Space', 'ENTER': 'Enter', 'BACKSPACE': 'Backspace',
     'DELETE': 'Delete', 'TAB': 'Tab', 'ESCAPE': 'Escape',
@@ -80,6 +73,16 @@ export function matchesAccelerator(e: KeyboardEvent, accelerator: string): boole
     return e.code === expectedCode;
   }
 
-  // Fallback: compare e.key
+  // For Option/Alt combos, use e.code (physical key) to avoid composed chars
+  if (needAlt) {
+    if (keyUpper.length === 1 && keyUpper >= 'A' && keyUpper <= 'Z') {
+      return e.code === 'Key' + keyUpper;
+    }
+    if (keyUpper.length === 1 && keyUpper >= '0' && keyUpper <= '9') {
+      return e.code === 'Digit' + keyUpper;
+    }
+  }
+
+  // For non-Option combos, use e.key (respects keyboard layout — DE, FR, etc.)
   return e.key.toLowerCase() === key.toLowerCase();
 }

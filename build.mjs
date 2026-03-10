@@ -121,4 +121,14 @@ if (fs.existsSync('assets/icon.png')) {
   fs.copyFileSync('assets/icon.png', `${DIST}/tray-icon.png`);
 }
 
+// Compile native click monitor (macOS only)
+if (process.platform === 'darwin') {
+  try {
+    execSync(`swiftc -O -o ${DIST}/click-monitor src/native/click-monitor.swift -framework Cocoa`, { stdio: 'inherit' });
+    console.log('Compiled click-monitor');
+  } catch (e) {
+    console.warn('Warning: Failed to compile click-monitor (pointer ping will not work)');
+  }
+}
+
 console.log('Build complete → dist/');
